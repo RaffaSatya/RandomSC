@@ -36,13 +36,11 @@ local Window = Rayfield:CreateWindow({
    }
 })
 
--- Variables
 local player = game.Players.LocalPlayer
 local currentCheckpoint = 0 -- Track which checkpoint player has passed
 local infiniteStaminaEnabled = false
 local originalNamecall = nil
 
--- Available characters
 local characters = {
    "Oguri Cap",
    "Tamamo Cross",
@@ -50,7 +48,6 @@ local characters = {
    "Silence Suzuka"
 }
 
--- Checkpoint parts configuration
 local checkpointParts = {
    {name = "Checkpoint 1 (Start)", part = workspace:WaitForChild("StartLine")},
    {name = "Checkpoint 2", part = workspace.Checkpoint:WaitForChild("Checkpoint2")},
@@ -62,7 +59,6 @@ local checkpointParts = {
    {name = "Checkpoint 8 (Loop)", part = workspace.Checkpoint:WaitForChild("Checkpoint1")}
 }
 
--- Function to get player's stamina info
 local function getPlayerStaminaInfo()
    local playerFolder = workspace.Players:FindFirstChild(player.Name)
    if playerFolder and playerFolder:FindFirstChild("Info") then
@@ -71,16 +67,13 @@ local function getPlayerStaminaInfo()
    return nil
 end
 
--- Function to toggle infinite stamina by blocking remote
 local function toggleInfiniteStamina(enabled)
    infiniteStaminaEnabled = enabled
    
    if enabled then
-      -- Hook the namecall metamethod to block RequestSprintAction
       originalNamecall = hookmetamethod(game, "__namecall", function(self, ...)
          local method = getnamecallmethod()
          
-         -- Block RequestSprintAction remote to prevent stamina drain
          if method == "FireServer" and self.Name == "RequestSprintAction" then
             return -- Block it (silent, no notification)
          end
@@ -88,14 +81,12 @@ local function toggleInfiniteStamina(enabled)
          return originalNamecall(self, ...)
       end)
    else
-      -- Restore original namecall
       if originalNamecall then
          hookmetamethod(game, "__namecall", originalNamecall)
       end
    end
 end
 
--- Function to auto win race
 local function autoWin()
    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
       return
@@ -132,19 +123,15 @@ local function autoWin()
    hrp.CFrame = CFrame.new(-693, 30, 561)
 end
 
--- Function to change character (stealthy method)
 local function changeCharacter(characterName)
-   -- Add a small delay to avoid detection
    task.wait(0.1)
    
-   -- Ensure we have a string, not a table
    if type(characterName) == "table" then
       characterName = characterName[1] or tostring(characterName)
    end
    
    local success, err = pcall(function()
       if player:FindFirstChild("CurrentCharacter") then
-         -- Change value directly like Dex does
          player.CurrentCharacter.Value = tostring(characterName)
       else
          error("CurrentCharacter not found")
@@ -171,9 +158,7 @@ local function changeCharacter(characterName)
    end
 end
 
--- Function to setup touch detection for checkpoints
 local function setupCheckpointDetection()
-   -- Setup SpawnLocation touch to reset checkpoint
    local spawnLocation = workspace:FindFirstChild("SpawnLocation")
    if spawnLocation then
       spawnLocation.Touched:Connect(function(hit)
@@ -189,22 +174,12 @@ local function setupCheckpointDetection()
       end)
    end
    
-   -- Setup checkpoint parts detection
    for i, checkpoint in ipairs(checkpointParts) do
       if checkpoint.part then
          checkpoint.part.Touched:Connect(function(hit)
             if hit.Parent == player.Character and hit.Name == "HumanoidRootPart" then
-               -- Special handling for checkpoint 8 (loop point)
                if i == 8 then
-                  -- After passing checkpoint 8, reset to checkpoint 1 to continue tracking
                   currentCheckpoint = 1
-                  Rayfield:Notify({
-                     Title = "Lap Complete! 🏆",
-                     Content = "Starting next lap...",
-                     Duration = 2,
-                     Image = 4483362458,
-                  })
-               -- Normal checkpoint progression (1→2→3→4→5→6→7→8)
                elseif i == currentCheckpoint + 1 then
                   currentCheckpoint = i
                   Rayfield:Notify({
@@ -213,7 +188,6 @@ local function setupCheckpointDetection()
                      Duration = 2,
                      Image = 4483362458,
                   })
-               -- Handle case where player is on lap 2+ and passes checkpoint 2-7
                elseif currentCheckpoint == 1 and i >= 2 and i <= 7 then
                   currentCheckpoint = i
                   Rayfield:Notify({
@@ -229,24 +203,19 @@ local function setupCheckpointDetection()
    end
 end
 
--- Function to get the next checkpoint to teleport to
 local function getNextCheckpoint()
-   -- If no checkpoint passed yet, go to checkpoint 1
    if currentCheckpoint == 0 then
       return 1
    end
    
-   -- If passed checkpoint 8 (finish), loop back to checkpoint 2
    if currentCheckpoint >= #checkpointParts then
-      currentCheckpoint = 1 -- Reset to 1 so next will be 2
+      currentCheckpoint = 1
       return 2
    end
    
-   -- Otherwise, go to the next checkpoint
    return currentCheckpoint + 1
 end
 
--- Function to teleport to specific checkpoint
 local function teleportToCheckpoint(checkpointNum)
    if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
       return
@@ -259,13 +228,11 @@ local function teleportToCheckpoint(checkpointNum)
    local checkpoint = checkpointParts[checkpointNum]
    
    if checkpoint.part then
-      -- Teleport to the checkpoint part position (slightly above it)
       local partPos = checkpoint.part.Position
       player.Character.HumanoidRootPart.CFrame = CFrame.new(partPos.X, partPos.Y + 5, partPos.Z)
    end
 end
 
--- Setup checkpoint detection on character spawn
 local function onCharacterAdded(character)
    setupCheckpointDetection()
 end
@@ -275,14 +242,12 @@ if player.Character then
 end
 player.CharacterAdded:Connect(onCharacterAdded)
 
--- Create Tabs
 local MainTab = Window:CreateTab("Main", nil)
 local CharacterTab = Window:CreateTab("Character", nil)
 local CheckpointTab = Window:CreateTab("Checkpoints", nil)
 local PowerupsTab = Window:CreateTab("Powerups", nil)
 local SettingsTab = Window:CreateTab("Settings", nil)
 
--- Main Tab
 local Section = MainTab:CreateSection("Quick Actions")
 
 local AutoWinButton = MainTab:CreateButton({
@@ -307,31 +272,29 @@ local CheckProgressButton = MainTab:CreateButton({
          Rayfield:Notify({
             Title = "No Progress Yet",
             Content = "You haven't passed any checkpoints",
-            Duration = 3,
+            Duration = 2,
             Image = 4483362458,
          })
       else
          Rayfield:Notify({
             Title = "Current Progress",
             Content = "Last passed: " .. checkpointParts[currentCheckpoint].name,
-            Duration = 3,
+            Duration = 2,
             Image = 4483362458,
          })
       end
    end,
 })
 
--- Character Tab
 local CharacterSection = CharacterTab:CreateSection("Character Selection")
 
 local CharacterDropdown = CharacterTab:CreateDropdown({
    Name = "🎭 Select Character",
    Options = characters,
-   CurrentOption = {"Oguri Cap"},
+   CurrentOption = {"nil"},
    MultipleOptions = false,
    Flag = "CharacterSelector",
    Callback = function(Option)
-      -- Convert table to string if needed
       local characterName = Option
       if type(Option) == "table" then
          characterName = Option[1] or Option
@@ -362,7 +325,6 @@ local CurrentCharacterButton = CharacterTab:CreateButton({
    end,
 })
 
--- Checkpoint Tab
 local CPSection = CheckpointTab:CreateSection("Manual Checkpoint Selection")
 
 for i = 1, #checkpointParts do
@@ -374,11 +336,10 @@ for i = 1, #checkpointParts do
    })
 end
 
--- Powerups Tab
 local PowerupsSection = PowerupsTab:CreateSection("Stamina")
 
 local InfiniteStaminaToggle = PowerupsTab:CreateToggle({
-   Name = "⚡ Infinite Stamina",
+   Name = "Infinite Stamina",
    CurrentValue = false,
    Flag = "InfiniteStamina",
    Callback = function(Value)
@@ -386,9 +347,8 @@ local InfiniteStaminaToggle = PowerupsTab:CreateToggle({
    end,
 })
 
-local StaminaLabel = PowerupsTab:CreateLabel("Blocks stamina drain by preventing sprint requests")
+local StaminaLabel = PowerupsTab:CreateLabel("Becarefull")
 
--- Settings Tab
 local SettingsSection = SettingsTab:CreateSection("Progress Settings")
 
 local ResetProgressButton = SettingsTab:CreateButton({
@@ -407,9 +367,8 @@ local ResetProgressButton = SettingsTab:CreateButton({
 local InfoSection = SettingsTab:CreateSection("Information")
 
 local InfoLabel = SettingsTab:CreateLabel("This script tracks your race progress automatically.")
-local InfoLabel2 = SettingsTab:CreateLabel("Touch each checkpoint part to progress!")
+local InfoLabel2 = SettingsTab:CreateLabel("Enjoy I guess")
 
--- Startup notification
 Rayfield:Notify({
    Title = "Script Loaded! ✅",
    Content = "Uma Racing Script by Zead",
@@ -417,5 +376,4 @@ Rayfield:Notify({
    Image = 4483362458,
 })
 
--- Initial setup
 setupCheckpointDetection()
