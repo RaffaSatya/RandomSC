@@ -1,0 +1,31 @@
+-- UmaRacing Loader - Only loadstring can read; users cannot see your source!
+-- Obfuscated script is base64 encoded. Loader decodes and executes.
+
+-- Base64 decode function
+local b='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+local function base64decode(data)
+    data = string.gsub(data, '[^'..b..'=]', '')
+    return (data:gsub('.', function(x)
+        if (x == '=') then return '' end
+        local r,f='',(b:find(x)-1)
+        for i=6,1,-1 do r=r..(f%2^i-f%2^(i-1)>0 and '1' or '0') end
+        return r
+    end):gsub('%d%d%d%d%d%d%d%d', function(x)
+        return string.char(tonumber(x, 2))
+    end))
+end
+
+-- REPLACE THIS STRING WITH YOUR BASE64 ENCODED (obfuscated!) SCRIPT!
+local encoded = [=[
+<PASTE-YOUR-BASE64-HERE>
+]=]
+
+local ok, err = pcall(function()
+    local src = base64decode(encoded)
+    local f = loadstring(src)
+    assert(f, "Decode error!")
+    return f()
+end)
+if not ok then
+    print("Error:", err)
+end
